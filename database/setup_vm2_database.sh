@@ -15,9 +15,9 @@ echo " Hostname:  $(hostname)"
 echo " IP Addr:   $(hostname -I | awk '{print $1}')"
 echo "======================================================================"
 
-DB_NAME="subsea_db"
-DB_USER="subsea_user"
-DB_PASS="SubseaSecurePass2026!"
+DB_NAME="subsea_pipeline"
+DB_USER="subsea_app"
+DB_PASS="SubseaApp@2026#ChangeMe"
 DB_PORT=3306
 
 # 1. Detect OS & Install MySQL Server
@@ -38,6 +38,7 @@ if [ -f /etc/oracle-release ] || [ -f /etc/redhat-release ]; then
     # Configure firewalld
     echo "[2/6] Configuring OS Firewall (firewalld)..."
     sudo firewall-cmd --zone=public --add-port=${DB_PORT}/tcp --permanent || true
+    sudo firewall-cmd --zone=public --add-port=5432/tcp --permanent || true
     sudo firewall-cmd --reload || true
 else
     echo "[1/6] Detected Debian/Ubuntu environment. Installing MySQL Server..."
@@ -53,11 +54,13 @@ else
     # Configure UFW firewall
     echo "[2/6] Configuring OS Firewall (UFW)..."
     sudo ufw allow ${DB_PORT}/tcp || true
+    sudo ufw allow 5432/tcp || true
 fi
 
 # 2. Configure Linux iptables rules (OCI Oracle Linux default enforces REJECT in iptables)
 echo "[3/6] Ensuring iptables allows remote incoming traffic on port ${DB_PORT}..."
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport ${DB_PORT} -j ACCEPT || sudo iptables -I INPUT 1 -p tcp --dport ${DB_PORT} -j ACCEPT
+sudo iptables -I INPUT 7 -m state --state NEW -p tcp --dport 5432 -j ACCEPT || true
 
 # Save iptables rules
 if command -v netfilter-persistent &> /dev/null; then
@@ -74,36 +77,43 @@ else
     sudo systemctl restart mysql
 fi
 
-# 4. Provision Subsea Database, Remote User and Permissions
-echo "[5/6] Creating database '${DB_NAME}' and granting remote access to '${DB_USER}'@'%'..."
+# 4. Provision Databases and Remote Users for Student 1
+echo "[5/6] Creating databases ('subsea_pipeline', 'subsea_db') and user privileges..."
 sudo mysql -uroot <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Create remote access user for Student 1 (Application Host on VM 1)
+-- Database 1: subsea_pipeline (for Student 1 App Host)
+CREATE DATABASE IF NOT EXISTS subsea_pipeline CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASS}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
-
--- Create local access user
+GRANT ALL PRIVILEGES ON subsea_pipeline.* TO '${DB_USER}'@'%';
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
+GRANT ALL PRIVILEGES ON subsea_pipeline.* TO '${DB_USER}'@'localhost';
+
+-- Database 2: subsea_db (for Set 30 Schema compatibility)
+CREATE DATABASE IF NOT EXISTS subsea_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'subsea_user'@'%' IDENTIFIED BY 'SubseaSecurePass2026!';
+GRANT ALL PRIVILEGES ON subsea_db.* TO 'subsea_user'@'%';
+CREATE USER IF NOT EXISTS 'subsea_user'@'localhost' IDENTIFIED BY 'SubseaSecurePass2026!';
+GRANT ALL PRIVILEGES ON subsea_db.* TO 'subsea_user'@'localhost';
 
 FLUSH PRIVILEGES;
 EOF
 
 # 5. Ingest Schema & Seed Data
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCHEMA_FILE="${SCRIPT_DIR}/subsea_pipeline_schema.sql"
+SCHEMA1="${SCRIPT_DIR}/subsea_pipeline.sql"
+SCHEMA2="${SCRIPT_DIR}/subsea_pipeline_schema.sql"
 
-if [ -f "$SCHEMA_FILE" ]; then
-    echo "[6/6] Executing schema DDL and Seed Data from ${SCHEMA_FILE}..."
-    sudo mysql -u"${DB_USER}" -p"${DB_PASS}" "${DB_NAME}" < "$SCHEMA_FILE"
-    echo ">> Database Schema and seed data successfully initialized!"
-else
-    echo "[6/6] Note: ${SCHEMA_FILE} not found in script dir. Please load schema manually."
+if [ -f "$SCHEMA1" ]; then
+    echo "[6/6] Ingesting subsea_pipeline database schema from ${SCHEMA1}..."
+    sudo mysql -u"${DB_USER}" -p"${DB_PASS}" "subsea_pipeline" < "$SCHEMA1"
+fi
+
+if [ -f "$SCHEMA2" ]; then
+    echo "[6/6] Ingesting subsea_db database schema from ${SCHEMA2}..."
+    sudo mysql -u"subsea_user" -p"SubseaSecurePass2026!" "subsea_db" < "$SCHEMA2"
 fi
 
 echo "======================================================================"
 echo " [STUDENT 2] VM 2 Database Host Provisioning COMPLETE!"
 echo " Remote JDBC URL for Student 1: jdbc:mysql://$(curl -s ifconfig.me):${DB_PORT}/${DB_NAME}"
-echo " Port ${DB_PORT} is open and ready to accept remote JDBC connections."
+echo " Port ${DB_PORT} is open and accepting remote JDBC connections from Student 1 (VM 1)."
 echo "======================================================================"

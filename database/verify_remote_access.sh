@@ -21,16 +21,16 @@ if command -v firewall-cmd &> /dev/null; then
 fi
 sudo iptables -L INPUT -n -v | grep 3306 && echo "iptables: Rule exists for 3306"
 
-echo -e "\n[4] Testing User Authentication & Querying Pipeline Segments:"
-mysql -u subsea_user -p'SubseaSecurePass2026!' -h 127.0.0.1 -D subsea_db -e "
-SELECT segment_code, asset_category, subsea_depth_meters, maop_psi, max_wall_loss_cap_pct 
+echo -e "\n[4] Testing User Authentication & Querying Pipeline Segments (subsea_pipeline):"
+mysql -u subsea_app -p'SubseaApp@2026#ChangeMe' -h 127.0.0.1 -D subsea_pipeline -e "
+SELECT segment_id, segment_code, category, subsea_depth_m, maop_psi 
 FROM pipe_segments LIMIT 5;
 "
 
-echo -e "\n[5] Checking Active Critical Hazards in DB:"
-mysql -u subsea_user -p'SubseaSecurePass2026!' -h 127.0.0.1 -D subsea_db -e "
-SELECT segment_code, ultrasonic_wall_loss_pct, cathodic_protection_voltage, integrity_grade, operational_status 
-FROM corrosion_audits WHERE hazard_flag = TRUE OR integrity_grade = 'D';
+echo -e "\n[5] Checking Active Critical Hazards in DB (repair_orders):"
+mysql -u subsea_app -p'SubseaApp@2026#ChangeMe' -h 127.0.0.1 -D subsea_pipeline -e "
+SELECT repair_id, segment_id, hazard_code, integrity_grade, action_required 
+FROM repair_orders WHERE integrity_grade = 'D' LIMIT 5;
 "
 
 echo -e "\n======================================================================"
