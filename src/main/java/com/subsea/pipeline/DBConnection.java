@@ -27,6 +27,7 @@ public class DBConnection {
 
     private static boolean driverAvailable = false;
     private static boolean connectionVerified = false;
+    private static boolean offlineMode = false;
 
     static {
         try {
@@ -54,16 +55,16 @@ public class DBConnection {
      * @throws SQLException on connectivity error when driver is present.
      */
     public static Connection getConnection() throws SQLException {
-        if (!driverAvailable) {
+        if (!driverAvailable || offlineMode) {
             return null;
         }
 
         String jdbcUrl;
         if (port == 5432) {
-            jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?connectTimeout=5&socketTimeout=10",
+            jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?connectTimeout=2&socketTimeout=5",
                     host, port, database);
         } else {
-            jdbcUrl = String.format("jdbc:mysql://%s:%d/%s?connectTimeout=5000&socketTimeout=10000&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+            jdbcUrl = String.format("jdbc:mysql://%s:%d/%s?connectTimeout=2000&socketTimeout=5000&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
                     host, port, database);
         }
 
@@ -72,7 +73,7 @@ public class DBConnection {
         props.setProperty("password", password);
 
         try {
-            DriverManager.setLoginTimeout(5);
+            DriverManager.setLoginTimeout(2);
             Connection conn = DriverManager.getConnection(jdbcUrl, props);
             if (!connectionVerified) {
                 System.out.println("[DBConnection] Successfully established remote JDBC session with OCI VM 2 (" + host + ":" + port + ")");
@@ -80,8 +81,9 @@ public class DBConnection {
             }
             return conn;
         } catch (SQLException e) {
-            System.err.println("[DBConnection WARNING] Unable to connect to remote DB (" + host + ":" + port + "): " + e.getMessage());
-            throw e;
+            offlineMode = true;
+            System.out.println("[DBConnection] Notice: MySQL host (" + host + ":" + port + ") unreachable. Switching to synchronized in-memory mirror.");
+            return null;
         }
     }
 

@@ -30,7 +30,7 @@ public class RepairOrderDAO {
 
     private static final String CHECK_EXISTS =
             "SELECT COUNT(*) FROM repair_orders WHERE segment_id = ? AND hazard_code = ? " +
-            "AND repair_date >= NOW() - INTERVAL 1 HOUR";
+            "AND repair_date >= TIMESTAMPADD(HOUR, -1, NOW())";
 
     private static final String INSERT_REPAIR_ORDER =
             "INSERT INTO repair_orders (segment_id, hazard_code, integrity_score, integrity_grade, rupture_risk_factor, action_required) " +

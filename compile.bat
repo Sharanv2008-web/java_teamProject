@@ -17,14 +17,14 @@ if exist "C:\Program Files\Java\jdk-21.0.11\bin\javac.exe" (
 echo Compiling Java source files using: %JAVAC_BIN%
 
 echo [1/2] Compiling Student 2 Pipeline Core Package (com.subsea.pipeline)...
-"%JAVAC_BIN%" -d bin -sourcepath src src\com\subsea\pipeline\*.java
+"%JAVAC_BIN%" -d bin -cp "lib/*" -sourcepath src src\com\subsea\pipeline\*.java
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation of Student 2 pipeline package failed!
     exit /b %ERRORLEVEL%
 )
 
 echo [2/2] Compiling Student 1 Main Application Tree (com.subsea)...
-"%JAVAC_BIN%" -d bin -sourcepath src\main\java src\main\java\com\subsea\model\*.java src\main\java\com\subsea\config\*.java src\main\java\com\subsea\dao\*.java src\main\java\com\subsea\calculation\*.java src\main\java\com\subsea\report\*.java src\main\java\com\subsea\worker\*.java src\main\java\com\subsea\service\*.java src\main\java\com\subsea\MainApp.java
+"%JAVAC_BIN%" -d bin -cp "bin;lib/*" -sourcepath src\main\java src\main\java\com\subsea\model\*.java src\main\java\com\subsea\config\*.java src\main\java\com\subsea\dao\*.java src\main\java\com\subsea\calculation\*.java src\main\java\com\subsea\report\*.java src\main\java\com\subsea\worker\*.java src\main\java\com\subsea\service\*.java src\main\java\com\subsea\MainApp.java src\main\java\com\subsea\pipeline\*.java
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation of Student 1 app tree failed!
     exit /b %ERRORLEVEL%
