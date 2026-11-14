@@ -11,6 +11,8 @@ if exist "C:\Program Files\Java\jdk-21.0.11\bin\java.exe" (
 if "%1"=="test" goto run_test
 if "%1"=="student1" goto run_student1
 if "%1"=="mission" goto run_mission
+if "%1"=="server" goto run_server
+if "%1"=="web" goto run_server
 
 :run_all
 echo ================================================================================
@@ -27,6 +29,13 @@ echo ---------------------------------------------------------------------------
 echo [STAGE 2/2] Executing Student 1 Multithreaded Monitoring Engine
 echo --------------------------------------------------------------------------------
 "%JAVA_BIN%" -cp "bin;lib/*" com.subsea.MainApp
+goto done
+
+:run_server
+echo ================================================================================
+echo  Starting Subsea Web Dashboard on http://localhost:8080
+echo ================================================================================
+"%JAVA_BIN%" -cp "bin;lib/*" com.subsea.pipeline.SubseaDashboardServer
 goto done
 
 :run_mission
