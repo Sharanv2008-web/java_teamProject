@@ -69,7 +69,7 @@ public class DBConnection {
 
         // Build JDBC URL
         jdbcUrl = String.format(
-            "jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=3000",
+            "jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=5000",
             host, port, database
         );
 
@@ -108,12 +108,12 @@ public class DBConnection {
     public static Connection getConnection() throws SQLException {
         if (!useInMemoryFallback) {
             try {
-                DriverManager.setLoginTimeout(3);
+                DriverManager.setLoginTimeout(5);
                 return DriverManager.getConnection(jdbcUrl, username, password);
             } catch (Exception e) {
-                // MySQL is offline or not installed on localhost
+                // MySQL is offline or not reachable
                 useInMemoryFallback = true;
-                System.out.println("[DBConnection] Notice: MySQL on port " + port + " is offline/unreachable.");
+                System.out.println("[DBConnection] Notice: MySQL on " + host + ":" + port + " is unreachable: " + e.getMessage());
                 System.out.println("[DBConnection] Activating Resilient In-Memory Subsea Database for local execution.");
             }
         }
